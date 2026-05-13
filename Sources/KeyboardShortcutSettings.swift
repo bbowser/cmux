@@ -303,9 +303,9 @@ enum KeyboardShortcutSettings {
             case .prevSidebarTab:
                 return StoredShortcut(key: "[", command: true, shift: false, option: false, control: true)
             case .focusHistoryBack:
-                return StoredShortcut(key: "[", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "[", command: true, shift: false, option: false, control: false)
             case .focusHistoryForward:
-                return StoredShortcut(key: "]", command: true, shift: false, option: true, control: false)
+                return StoredShortcut(key: "]", command: true, shift: false, option: false, control: false)
             case .renameTab:
                 return StoredShortcut(key: "r", command: true, shift: false, option: false, control: false)
             case .renameWorkspace:

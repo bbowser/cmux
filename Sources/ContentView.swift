@@ -9348,6 +9348,11 @@ struct VerticalTabsSidebar: View {
                         .frame(height: sidebarTitlebarInteractionHeight)
                         .background(TitlebarDoubleClickMonitorView())
                 }
+                .overlay(alignment: .topTrailing) {
+                    SidebarFocusHistoryControls()
+                        .padding(.top, 6)
+                        .padding(.trailing, 10)
+                }
                 .overlay(alignment: .top) {
                     if draggedTabId != nil, let firstWorkspaceId = renderContext.workspaceIds.first {
                         Color.clear
@@ -10563,8 +10568,19 @@ private struct SidebarFooter: View {
 private struct SidebarFooterButtons: View {
     @ObservedObject var updateViewModel: UpdateViewModel
     @ObservedObject var fileExplorerState: FileExplorerState
-    @EnvironmentObject private var tabManager: TabManager
     let onSendFeedback: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            SidebarHelpMenuButton(onSendFeedback: onSendFeedback)
+            UpdatePill(model: updateViewModel)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SidebarFocusHistoryControls: View {
+    @EnvironmentObject private var tabManager: TabManager
 
     var body: some View {
         let _ = tabManager.focusHistoryRevision
@@ -10573,10 +10589,8 @@ private struct SidebarFooterButtons: View {
                 .disabled(!tabManager.canNavigateBack)
             SidebarFocusHistoryButton(direction: .forward)
                 .disabled(!tabManager.canNavigateForward)
-            SidebarHelpMenuButton(onSendFeedback: onSendFeedback)
-            UpdatePill(model: updateViewModel)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
     }
 }
 

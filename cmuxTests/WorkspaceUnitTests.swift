@@ -293,15 +293,18 @@ final class WorkspaceRenameShortcutDefaultsTests: XCTestCase {
         XCTAssertEqual(focusBackShortcut.key, "[")
         XCTAssertTrue(focusBackShortcut.command)
         XCTAssertFalse(focusBackShortcut.shift)
-        XCTAssertTrue(focusBackShortcut.option)
+        XCTAssertFalse(focusBackShortcut.option)
         XCTAssertFalse(focusBackShortcut.control)
 
         let focusForwardShortcut = KeyboardShortcutSettings.Action.focusHistoryForward.defaultShortcut
         XCTAssertEqual(focusForwardShortcut.key, "]")
         XCTAssertTrue(focusForwardShortcut.command)
         XCTAssertFalse(focusForwardShortcut.shift)
-        XCTAssertTrue(focusForwardShortcut.option)
+        XCTAssertFalse(focusForwardShortcut.option)
         XCTAssertFalse(focusForwardShortcut.control)
+
+        XCTAssertTrue(KeyboardShortcutSettings.settingsVisibleActions.contains(.focusHistoryBack))
+        XCTAssertTrue(KeyboardShortcutSettings.settingsVisibleActions.contains(.focusHistoryForward))
     }
 
     func testNextPreviousWorkspaceShortcutsConvertToMenuShortcut() {
