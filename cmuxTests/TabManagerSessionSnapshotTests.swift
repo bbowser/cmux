@@ -69,6 +69,16 @@ final class TabManagerSessionSnapshotTests: XCTestCase {
 
         XCTAssertEqual(manager.selectedTabId, firstWorkspace.id)
         XCTAssertTrue(manager.canNavigateForward)
+        NotificationCenter.default.post(
+            name: .ghosttyDidFocusSurface,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: firstWorkspace.id,
+                GhosttyNotificationKey.surfaceId: try XCTUnwrap(firstWorkspace.focusedPanelId),
+            ]
+        )
+        drainMainQueue()
+        XCTAssertTrue(manager.canNavigateForward)
 
         manager.navigateForward()
 

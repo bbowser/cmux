@@ -5609,14 +5609,26 @@ class TabManager: ObservableObject {
 
     private func recordFocusInHistory(workspaceId: UUID, panelId: UUID?) {
         guard !isNavigatingHistory else { return }
-        guard focusHistoryEntryIsValid(FocusHistoryEntry(workspaceId: workspaceId, panelId: panelId)) else { return }
+        let entry = FocusHistoryEntry(workspaceId: workspaceId, panelId: panelId)
+        guard focusHistoryEntryIsValid(entry) else { return }
 
-        if historyIndex < focusHistory.count - 1 {
-            focusHistory = Array(focusHistory.prefix(historyIndex + 1))
+        if historyIndex >= 0,
+           historyIndex < focusHistory.count,
+           focusHistory[historyIndex] == entry {
+            return
         }
 
-        let entry = FocusHistoryEntry(workspaceId: workspaceId, panelId: panelId)
+        var didMutateHistory = false
+        if historyIndex < focusHistory.count - 1 {
+            focusHistory = Array(focusHistory.prefix(historyIndex + 1))
+            didMutateHistory = true
+        }
+
         if focusHistory.last == entry {
+            historyIndex = focusHistory.count - 1
+            if didMutateHistory {
+                focusHistoryRevision &+= 1
+            }
             return
         }
 
@@ -5633,6 +5645,17 @@ class TabManager: ObservableObject {
         guard let workspace = tabs.first(where: { $0.id == entry.workspaceId }) else { return false }
         guard let panelId = entry.panelId else { return true }
         return workspace.panels[panelId] != nil
+    }
+
+    private var currentFocusHistoryEntry: FocusHistoryEntry? {
+        guard let selectedTabId else { return nil }
+        return FocusHistoryEntry(workspaceId: selectedTabId, panelId: focusedPanelId(for: selectedTabId))
+    }
+
+    private func focusHistoryEntryIsNavigable(_ entry: FocusHistoryEntry, currentEntry: FocusHistoryEntry?) -> Bool {
+        guard focusHistoryEntryIsValid(entry) else { return false }
+        if let currentEntry, entry == currentEntry { return false }
+        return true
     }
 
     @discardableResult
@@ -5668,9 +5691,21 @@ class TabManager: ObservableObject {
     func navigateBack() {
         guard historyIndex > 0 else { return }
 
+        let currentEntry = currentFocusHistoryEntry
         var targetIndex = historyIndex - 1
         while targetIndex >= 0 {
             let entry = focusHistory[targetIndex]
+            guard focusHistoryEntryIsValid(entry) else {
+                focusHistory.remove(at: targetIndex)
+                historyIndex -= 1
+                targetIndex -= 1
+                focusHistoryRevision &+= 1
+                continue
+            }
+            if let currentEntry, entry == currentEntry {
+                targetIndex -= 1
+                continue
+            }
             if restoreFocusHistoryEntry(entry) {
                 historyIndex = targetIndex
                 return
@@ -5685,9 +5720,19 @@ class TabManager: ObservableObject {
     func navigateForward() {
         guard historyIndex < focusHistory.count - 1 else { return }
 
-        let targetIndex = historyIndex + 1
+        let currentEntry = currentFocusHistoryEntry
+        var targetIndex = historyIndex + 1
         while targetIndex < focusHistory.count {
             let entry = focusHistory[targetIndex]
+            guard focusHistoryEntryIsValid(entry) else {
+                focusHistory.remove(at: targetIndex)
+                focusHistoryRevision &+= 1
+                continue
+            }
+            if let currentEntry, entry == currentEntry {
+                targetIndex += 1
+                continue
+            }
             if restoreFocusHistoryEntry(entry) {
                 historyIndex = targetIndex
                 return
@@ -5698,14 +5743,16 @@ class TabManager: ObservableObject {
     }
 
     var canNavigateBack: Bool {
-        historyIndex > 0 && focusHistory.prefix(historyIndex).contains { entry in
-            focusHistoryEntryIsValid(entry)
+        let currentEntry = currentFocusHistoryEntry
+        return historyIndex > 0 && focusHistory.prefix(historyIndex).contains { entry in
+            focusHistoryEntryIsNavigable(entry, currentEntry: currentEntry)
         }
     }
 
     var canNavigateForward: Bool {
-        historyIndex < focusHistory.count - 1 && focusHistory.suffix(from: historyIndex + 1).contains { entry in
-            focusHistoryEntryIsValid(entry)
+        let currentEntry = currentFocusHistoryEntry
+        return historyIndex < focusHistory.count - 1 && focusHistory.suffix(from: historyIndex + 1).contains { entry in
+            focusHistoryEntryIsNavigable(entry, currentEntry: currentEntry)
         }
     }
 
