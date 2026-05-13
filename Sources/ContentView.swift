@@ -2275,6 +2275,12 @@ struct ContentView: View {
                     debugSource: "titlebar.fullscreenNewWorkspace"
                 )
             },
+            onFocusHistoryBack: {
+                tabManager.navigateBack()
+            },
+            onFocusHistoryForward: {
+                tabManager.navigateForward()
+            },
             visibilityMode: .alwaysVisible
         )
     }
@@ -9348,11 +9354,6 @@ struct VerticalTabsSidebar: View {
                         .frame(height: sidebarTitlebarInteractionHeight)
                         .background(TitlebarDoubleClickMonitorView())
                 }
-                .overlay(alignment: .topTrailing) {
-                    SidebarFocusHistoryControls()
-                        .padding(.top, 6)
-                        .padding(.trailing, 10)
-                }
                 .overlay(alignment: .top) {
                     if draggedTabId != nil, let firstWorkspaceId = renderContext.workspaceIds.first {
                         Color.clear
@@ -9381,7 +9382,13 @@ struct VerticalTabsSidebar: View {
                                     anchorView: anchorView
                                 )
                             },
-                            onNewTab: onNewTab
+                            onNewTab: onNewTab,
+                            onFocusHistoryBack: {
+                                tabManager.navigateBack()
+                            },
+                            onFocusHistoryForward: {
+                                tabManager.navigateForward()
+                            }
                         )
                             .padding(
                                 .leading,

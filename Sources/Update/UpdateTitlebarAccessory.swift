@@ -429,6 +429,8 @@ struct TitlebarControlsView: View {
     let onToggleSidebar: () -> Void
     let onToggleNotifications: () -> Void
     let onNewTab: () -> Void
+    let onFocusHistoryBack: () -> Void
+    let onFocusHistoryForward: () -> Void
     let visibilityMode: TitlebarControlsVisibilityMode
     @ObservedObject private var popoverVisibilityState = NotificationsPopoverVisibilityState.shared
     @AppStorage("titlebarControlsStyle") private var styleRawValue = TitlebarControlsStyle.classic.rawValue
@@ -595,6 +597,26 @@ struct TitlebarControlsView: View {
                 iconLabel(systemName: "plus", config: config)
             }
             .safeHelp(KeyboardShortcutSettings.Action.newTab.tooltip(String(localized: "titlebar.newWorkspace.tooltip", defaultValue: "New workspace")))
+
+            TitlebarControlButton(
+                config: config,
+                accessibilityIdentifier: "sidebar.focusHistoryBack",
+                accessibilityLabel: String(localized: "menu.history.focusBack", defaultValue: "Focus Back"),
+                action: onFocusHistoryBack
+            ) {
+                iconLabel(systemName: "chevron.left", config: config)
+            }
+            .safeHelp(KeyboardShortcutSettings.Action.focusHistoryBack.tooltip(String(localized: "menu.history.focusBack", defaultValue: "Focus Back")))
+
+            TitlebarControlButton(
+                config: config,
+                accessibilityIdentifier: "sidebar.focusHistoryForward",
+                accessibilityLabel: String(localized: "menu.history.focusForward", defaultValue: "Focus Forward"),
+                action: onFocusHistoryForward
+            ) {
+                iconLabel(systemName: "chevron.right", config: config)
+            }
+            .safeHelp(KeyboardShortcutSettings.Action.focusHistoryForward.tooltip(String(localized: "menu.history.focusForward", defaultValue: "Focus Forward")))
 
         }
 
@@ -823,6 +845,8 @@ struct HiddenTitlebarSidebarControlsView: View {
     let onToggleSidebar: () -> Void
     let onToggleNotifications: (NSView?) -> Void
     let onNewTab: () -> Void
+    let onFocusHistoryBack: () -> Void
+    let onFocusHistoryForward: () -> Void
     @StateObject private var viewModel = TitlebarControlsViewModel()
     @ObservedObject private var popoverVisibilityState = NotificationsPopoverVisibilityState.shared
     @State private var isHoveringHost = false
@@ -874,6 +898,8 @@ struct HiddenTitlebarSidebarControlsView: View {
                     onToggleNotifications(viewModel.notificationsAnchorView)
                 },
                 onNewTab: onNewTab,
+                onFocusHistoryBack: onFocusHistoryBack,
+                onFocusHistoryForward: onFocusHistoryForward,
                 visibilityMode: .alwaysVisible
             )
             .frame(
@@ -1353,6 +1379,12 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
             _ = AppDelegate.shared?.toggleNotificationsPopover(animated: true, anchorView: containerView)
         }
         let newTab = { _ = AppDelegate.shared?.performNewWorkspaceAction(debugSource: "titlebar.accessoryNewWorkspace") }
+        let focusHistoryBack = { [weak containerView] in
+            _ = AppDelegate.shared?.activeTabManagerForCommands(preferredWindow: containerView?.window)?.navigateBack()
+        }
+        let focusHistoryForward = { [weak containerView] in
+            _ = AppDelegate.shared?.activeTabManagerForCommands(preferredWindow: containerView?.window)?.navigateForward()
+        }
         hostingView = NonDraggableHostingView(
             rootView: TitlebarControlsView(
                 notificationStore: notificationStore,
@@ -1360,6 +1392,8 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
                 onToggleSidebar: toggleSidebar,
                 onToggleNotifications: toggleNotifications,
                 onNewTab: newTab,
+                onFocusHistoryBack: focusHistoryBack,
+                onFocusHistoryForward: focusHistoryForward,
                 visibilityMode: .alwaysVisible
             )
         )
