@@ -1069,7 +1069,7 @@ class TabManager: ObservableObject {
                let previousPanelId = focusedPanelId(for: previousTabId) {
                 lastFocusedPanelByTab[previousTabId] = previousPanelId
             }
-            if !isNavigatingHistory {
+            if shouldRecordFocusHistory {
                 if let previousTabId {
                     recordFocusInHistory(workspaceId: previousTabId, panelId: focusedPanelId(for: previousTabId))
                 }
@@ -1140,6 +1140,10 @@ class TabManager: ObservableObject {
     private var focusHistory: [FocusHistoryEntry] = []
     private var historyIndex: Int = -1
     private var isNavigatingHistory = false
+    private var focusHistoryRecordingSuppressionDepth = 0
+    private var shouldRecordFocusHistory: Bool {
+        !isNavigatingHistory && focusHistoryRecordingSuppressionDepth == 0
+    }
     private let maxHistorySize = 50
     private var selectionSideEffectsGeneration: UInt64 = 0
     private var workspaceCycleGeneration: UInt64 = 0
@@ -5607,8 +5611,15 @@ class TabManager: ObservableObject {
 
     // MARK: - Focus History Navigation
 
+    @discardableResult
+    private func withFocusHistoryRecordingSuppressed<Result>(_ body: () throws -> Result) rethrows -> Result {
+        focusHistoryRecordingSuppressionDepth += 1
+        defer { focusHistoryRecordingSuppressionDepth -= 1 }
+        return try body()
+    }
+
     private func recordFocusInHistory(workspaceId: UUID, panelId: UUID?) {
-        guard !isNavigatingHistory else { return }
+        guard shouldRecordFocusHistory else { return }
         let entry = FocusHistoryEntry(workspaceId: workspaceId, panelId: panelId)
         guard focusHistoryEntryIsValid(entry) else { return }
 
@@ -5639,6 +5650,11 @@ class TabManager: ObservableObject {
 
         historyIndex = focusHistory.count - 1
         focusHistoryRevision &+= 1
+    }
+
+    private func recordFocusInHistory(_ entry: FocusHistoryEntry?) {
+        guard let entry else { return }
+        recordFocusInHistory(workspaceId: entry.workspaceId, panelId: entry.panelId)
     }
 
     private func focusHistoryEntryIsValid(_ entry: FocusHistoryEntry) -> Bool {
@@ -6083,8 +6099,8 @@ class TabManager: ObservableObject {
 
     @discardableResult
     func reopenMostRecentlyClosedItem() -> Bool {
-        if AppDelegate.shared?.reopenMostRecentlyClosedItem(preferredTabManager: self) == true {
-            return true
+        if let appDelegate = AppDelegate.shared {
+            return appDelegate.reopenMostRecentlyClosedItem(preferredTabManager: self)
         }
 
         while let entry = ClosedItemHistoryStore.shared.pop() {
@@ -6114,11 +6130,15 @@ class TabManager: ObservableObject {
             return false
         }
 
+        let preRestoreFocus = currentFocusHistoryEntry
         if selectedTabId != workspace.id {
-            selectedTabId = workspace.id
+            withFocusHistoryRecordingSuppressed {
+                selectedTabId = workspace.id
+            }
         }
 
         guard let panelId = workspace.restoreClosedPanel(entry) else { return false }
+        recordFocusInHistory(preRestoreFocus)
         rememberFocusedSurface(tabId: workspace.id, surfaceId: panelId)
         recordFocusInHistory(workspaceId: workspace.id, panelId: panelId)
         return true
@@ -6126,6 +6146,7 @@ class TabManager: ObservableObject {
 
     @discardableResult
     func restoreClosedWorkspace(_ entry: ClosedWorkspaceHistoryEntry) -> Bool {
+        let preRestoreFocus = currentFocusHistoryEntry
         let workspace = addWorkspace(
             title: entry.snapshot.customTitle ?? entry.snapshot.processTitle,
             workingDirectory: entry.snapshot.currentDirectory,
@@ -6140,8 +6161,11 @@ class TabManager: ObservableObject {
             tabs.insert(removed, at: insertIndex)
         }
 
-        selectedTabId = workspace.id
+        withFocusHistoryRecordingSuppressed {
+            selectedTabId = workspace.id
+        }
         if let focusedPanelId = workspace.focusedPanelId {
+            recordFocusInHistory(preRestoreFocus)
             rememberFocusedSurface(tabId: workspace.id, surfaceId: focusedPanelId)
             workspace.triggerFocusFlash(panelId: focusedPanelId)
             recordFocusInHistory(workspaceId: workspace.id, panelId: focusedPanelId)
@@ -7673,6 +7697,7 @@ extension TabManager {
         focusHistory.removeAll()
         historyIndex = -1
         isNavigatingHistory = false
+        focusHistoryRecordingSuppressionDepth = 0
         focusHistoryRevision &+= 1
         pendingWorkspaceUnfocusTarget = nil
         workspaceCycleCooldownTask?.cancel()
