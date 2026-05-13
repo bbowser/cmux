@@ -633,12 +633,12 @@ struct cmuxApp: App {
             splitCommandButton(title: String(localized: "menu.history.focusBack", defaultValue: "Focus Back"), shortcut: menuShortcut(for: .focusHistoryBack)) {
                 activeTabManager.navigateBack()
             }
-            .disabled(!activeTabManager.canNavigateBack)
+            .disabled(!canNavigateFocusHistoryBack)
 
             splitCommandButton(title: String(localized: "menu.history.focusForward", defaultValue: "Focus Forward"), shortcut: menuShortcut(for: .focusHistoryForward)) {
                 activeTabManager.navigateForward()
             }
-            .disabled(!activeTabManager.canNavigateForward)
+            .disabled(!canNavigateFocusHistoryForward)
 
             Divider()
 
@@ -888,6 +888,18 @@ struct cmuxApp: App {
         AppDelegate.shared?.activeTabManagerForCommands(
             preferredWindow: NSApp.keyWindow ?? NSApp.mainWindow
         ) ?? tabManager
+    }
+
+    private var canNavigateFocusHistoryBack: Bool {
+        let manager = activeTabManager
+        let _ = manager.focusHistoryRevision
+        return manager.canNavigateBack
+    }
+
+    private var canNavigateFocusHistoryForward: Bool {
+        let manager = activeTabManager
+        let _ = manager.focusHistoryRevision
+        return manager.canNavigateForward
     }
     private func notificationMenuItemTitle(for notification: TerminalNotification) -> String {
         let tabTitle = appDelegate.tabTitle(for: notification.tabId)

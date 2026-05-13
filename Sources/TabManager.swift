@@ -1069,8 +1069,13 @@ class TabManager: ObservableObject {
                let previousPanelId = focusedPanelId(for: previousTabId) {
                 lastFocusedPanelByTab[previousTabId] = previousPanelId
             }
-            if !isNavigatingHistory, let selectedTabId {
-                recordFocusInHistory(workspaceId: selectedTabId, panelId: focusedPanelId(for: selectedTabId))
+            if !isNavigatingHistory {
+                if let previousTabId {
+                    recordFocusInHistory(workspaceId: previousTabId, panelId: focusedPanelId(for: previousTabId))
+                }
+                if let selectedTabId {
+                    recordFocusInHistory(workspaceId: selectedTabId, panelId: focusedPanelId(for: selectedTabId))
+                }
             }
             publishCmuxWorkspaceSelectedChange(from: previousTabId)
 #if DEBUG
