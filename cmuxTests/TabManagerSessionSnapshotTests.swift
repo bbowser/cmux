@@ -102,6 +102,26 @@ final class TabManagerSessionSnapshotTests: XCTestCase {
         XCTAssertNotNil(workspace.focusedPanelId.flatMap { workspace.panels[$0] })
     }
 
+    func testReopenClosedPanelBackReturnsToPreviousWorkspaceFocus() throws {
+        let manager = TabManager()
+        let firstWorkspace = try XCTUnwrap(manager.selectedWorkspace)
+        let secondWorkspace = manager.addWorkspace(select: false)
+        let pane = try XCTUnwrap(secondWorkspace.bonsplitController.allPaneIds.first)
+        let panelId = try XCTUnwrap(secondWorkspace.newTerminalSurface(inPane: pane, focus: true)?.id)
+
+        secondWorkspace.markCloseHistoryEligible(panelId: panelId)
+        XCTAssertTrue(secondWorkspace.closePanel(panelId, force: true))
+        drainMainQueue()
+
+        XCTAssertTrue(manager.reopenMostRecentlyClosedItem())
+        XCTAssertEqual(manager.selectedTabId, secondWorkspace.id)
+        XCTAssertTrue(manager.canNavigateBack)
+
+        manager.navigateBack()
+
+        XCTAssertEqual(manager.selectedTabId, firstWorkspace.id)
+    }
+
     func testReopenClosedItemRestoresClosedWorkspaceSnapshot() throws {
         let manager = TabManager()
         let firstWorkspace = try XCTUnwrap(manager.selectedWorkspace)
@@ -114,6 +134,24 @@ final class TabManagerSessionSnapshotTests: XCTestCase {
         XCTAssertTrue(manager.reopenMostRecentlyClosedItem())
         XCTAssertEqual(manager.tabs.count, 2)
         XCTAssertEqual(manager.selectedWorkspace?.customTitle, "Recovered")
+    }
+
+    func testReopenClosedWorkspaceBackReturnsToPreviousWorkspaceFocus() throws {
+        let manager = TabManager()
+        let firstWorkspace = try XCTUnwrap(manager.selectedWorkspace)
+        let secondWorkspace = manager.addWorkspace(select: true)
+        secondWorkspace.setCustomTitle("Recovered")
+
+        manager.closeWorkspace(secondWorkspace)
+
+        XCTAssertEqual(manager.selectedTabId, firstWorkspace.id)
+        XCTAssertTrue(manager.reopenMostRecentlyClosedItem())
+        XCTAssertEqual(manager.selectedWorkspace?.customTitle, "Recovered")
+        XCTAssertTrue(manager.canNavigateBack)
+
+        manager.navigateBack()
+
+        XCTAssertEqual(manager.selectedTabId, firstWorkspace.id)
     }
 
     func testRestoreSessionSnapshotWithNoWorkspacesKeepsSingleFallbackWorkspace() {
