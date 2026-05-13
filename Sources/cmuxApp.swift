@@ -548,8 +548,8 @@ struct cmuxApp: App {
                     }
                 }
 
-                splitCommandButton(title: String(localized: "menu.file.reopenClosedBrowserPanel", defaultValue: "Reopen Closed Browser Panel"), shortcut: menuShortcut(for: .reopenClosedBrowserPanel)) {
-                    _ = activeTabManager.reopenMostRecentlyClosedBrowserPanel()
+                splitCommandButton(title: String(localized: "menu.history.reopenClosedItem", defaultValue: "Reopen Closed Item"), shortcut: menuShortcut(for: .reopenClosedBrowserPanel)) {
+                    _ = AppDelegate.shared?.reopenMostRecentlyClosedItem(preferredTabManager: activeTabManager)
                 }
             }
 
@@ -628,6 +628,35 @@ struct cmuxApp: App {
     }
 
     @CommandsBuilder
+    private var historyCommands: some Commands {
+        CommandMenu(String(localized: "menu.history.title", defaultValue: "History")) {
+            splitCommandButton(title: String(localized: "menu.history.focusBack", defaultValue: "Focus Back"), shortcut: menuShortcut(for: .focusHistoryBack)) {
+                activeTabManager.navigateBack()
+            }
+            .disabled(!activeTabManager.canNavigateBack)
+
+            splitCommandButton(title: String(localized: "menu.history.focusForward", defaultValue: "Focus Forward"), shortcut: menuShortcut(for: .focusHistoryForward)) {
+                activeTabManager.navigateForward()
+            }
+            .disabled(!activeTabManager.canNavigateForward)
+
+            Divider()
+
+            splitCommandButton(title: String(localized: "menu.history.reopenClosedItem", defaultValue: "Reopen Closed Item"), shortcut: menuShortcut(for: .reopenClosedBrowserPanel)) {
+                if AppDelegate.shared?.reopenMostRecentlyClosedItem(preferredTabManager: activeTabManager) != true {
+                    NSSound.beep()
+                }
+            }
+
+            splitCommandButton(title: String(localized: "menu.file.reopenPreviousSession", defaultValue: "Reopen Previous Session"), shortcut: menuShortcut(for: .reopenPreviousSession)) {
+                if AppDelegate.shared?.reopenPreviousSession() != true {
+                    NSSound.beep()
+                }
+            }
+        }
+    }
+
+    @CommandsBuilder
     private var windowAndViewCommands: some Commands {
         CommandGroup(after: .windowArrangement) {
             Button(String(localized: "menu.window.taskManager", defaultValue: "Task Manager...")) {
@@ -635,6 +664,7 @@ struct cmuxApp: App {
             }
         }
         helpCommands
+        historyCommands
         CommandGroup(after: .toolbar) {
             splitCommandButton(title: String(localized: "menu.view.toggleLeftSidebar", defaultValue: "Toggle Left Sidebar"), shortcut: menuShortcut(for: .toggleSidebar)) {
                 if AppDelegate.shared?.toggleSidebarInActiveMainWindow() != true {
