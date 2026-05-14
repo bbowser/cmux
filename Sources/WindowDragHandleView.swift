@@ -553,7 +553,7 @@ enum MinimalModeSidebarTitlebarControlsMetrics {
         MinimalModeTitlebarDebugSettings.leftControlsTopInset(defaults: defaults)
     }
 
-    static let hostWidth: CGFloat = 176
+    static let hostWidth: CGFloat = 164
     static let hostHeight: CGFloat = 28
     static let singleButtonHostWidth: CGFloat = hostHeight
 }

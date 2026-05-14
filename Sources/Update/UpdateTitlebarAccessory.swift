@@ -35,21 +35,8 @@ enum TitlebarControlsStyle: Int, CaseIterable, Identifiable {
         switch self {
         case .classic:
             return TitlebarControlsStyleConfig(
-                spacing: 10,
-                iconSize: 15,
-                buttonSize: 24,
-                badgeSize: 14,
-                badgeOffset: CGSize(width: 2, height: -2),
-                groupBackground: false,
-                groupPadding: EdgeInsets(),
-                buttonBackground: false,
-                buttonCornerRadius: 8,
-                hoverBackground: false
-            )
-        case .compact:
-            return TitlebarControlsStyleConfig(
                 spacing: 6,
-                iconSize: 13,
+                iconSize: 12,
                 buttonSize: 20,
                 badgeSize: 12,
                 badgeOffset: CGSize(width: 1, height: -1),
@@ -59,43 +46,56 @@ enum TitlebarControlsStyle: Int, CaseIterable, Identifiable {
                 buttonCornerRadius: 6,
                 hoverBackground: false
             )
-        case .roomy:
+        case .compact:
             return TitlebarControlsStyleConfig(
-                spacing: 14,
-                iconSize: 16,
-                buttonSize: 28,
-                badgeSize: 16,
-                badgeOffset: CGSize(width: 3, height: -3),
+                spacing: 5,
+                iconSize: 11,
+                buttonSize: 18,
+                badgeSize: 11,
+                badgeOffset: CGSize(width: 1, height: -1),
                 groupBackground: false,
                 groupPadding: EdgeInsets(),
                 buttonBackground: false,
-                buttonCornerRadius: 10,
+                buttonCornerRadius: 5,
+                hoverBackground: false
+            )
+        case .roomy:
+            return TitlebarControlsStyleConfig(
+                spacing: 7,
+                iconSize: 13,
+                buttonSize: 22,
+                badgeSize: 13,
+                badgeOffset: CGSize(width: 1, height: -1),
+                groupBackground: false,
+                groupPadding: EdgeInsets(),
+                buttonBackground: false,
+                buttonCornerRadius: 7,
                 hoverBackground: false
             )
         case .pillGroup:
             return TitlebarControlsStyleConfig(
-                spacing: 8,
-                iconSize: 14,
-                buttonSize: 24,
-                badgeSize: 14,
-                badgeOffset: CGSize(width: 2, height: -2),
+                spacing: 5,
+                iconSize: 12,
+                buttonSize: 20,
+                badgeSize: 12,
+                badgeOffset: CGSize(width: 1, height: -1),
                 groupBackground: false,
-                groupPadding: EdgeInsets(top: 1, leading: 4, bottom: 1, trailing: 4),
+                groupPadding: EdgeInsets(top: 1, leading: 3, bottom: 1, trailing: 3),
                 buttonBackground: false,
-                buttonCornerRadius: 8,
+                buttonCornerRadius: 6,
                 hoverBackground: true
             )
         case .softButtons:
             return TitlebarControlsStyleConfig(
-                spacing: 8,
-                iconSize: 15,
-                buttonSize: 26,
-                badgeSize: 14,
-                badgeOffset: CGSize(width: 2, height: -2),
+                spacing: 6,
+                iconSize: 12,
+                buttonSize: 21,
+                badgeSize: 12,
+                badgeOffset: CGSize(width: 1, height: -1),
                 groupBackground: false,
                 groupPadding: EdgeInsets(),
                 buttonBackground: true,
-                buttonCornerRadius: 8,
+                buttonCornerRadius: 6,
                 hoverBackground: false
             )
         }
@@ -347,6 +347,13 @@ func titlebarShortcutHintVerticalOffset(for config: TitlebarControlsStyleConfig)
     max(0, floor(config.buttonSize - titlebarShortcutHintHeight(for: config)))
 }
 
+private enum TitlebarControlIconStyle {
+    static let opacity = 0.72
+    static let weight: Font.Weight = .regular
+    static let foregroundColor = Color(nsColor: .secondaryLabelColor)
+    static let sidebarGlyphStrokeWidth: CGFloat = 1
+}
+
 struct TitlebarControlButton<Content: View>: View {
     let config: TitlebarControlsStyleConfig
     let accessibilityIdentifier: String
@@ -548,7 +555,7 @@ struct TitlebarControlsView: View {
                 #endif
                 onToggleSidebar()
             }) {
-                iconLabel(systemName: "sidebar.left", config: config)
+                sidebarIconLabel(config: config)
             }
             .safeHelp(KeyboardShortcutSettings.Action.toggleSidebar.tooltip(String(localized: "titlebar.sidebar.tooltip", defaultValue: "Show or hide the sidebar")))
 
@@ -734,19 +741,70 @@ struct TitlebarControlsView: View {
 
     @ViewBuilder
     private func iconLabel(systemName: String, config: TitlebarControlsStyleConfig) -> some View {
-        let icon = Image(systemName: systemName)
-            .font(.system(size: config.iconSize, weight: .semibold))
-            .frame(width: config.buttonSize, height: config.buttonSize)
+        titlebarIconChrome(config: config) {
+            Image(systemName: systemName)
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: config.iconSize, weight: TitlebarControlIconStyle.weight))
+        }
+    }
 
+    @ViewBuilder
+    private func sidebarIconLabel(config: TitlebarControlsStyleConfig) -> some View {
+        titlebarIconChrome(config: config) {
+            TitlebarSidebarGlyph(iconSize: config.iconSize)
+        }
+    }
+
+    @ViewBuilder
+    private func titlebarIconChrome<Icon: View>(
+        config: TitlebarControlsStyleConfig,
+        @ViewBuilder icon: () -> Icon
+    ) -> some View {
         if config.buttonBackground {
-            icon
+            icon()
+                .foregroundStyle(TitlebarControlIconStyle.foregroundColor.opacity(TitlebarControlIconStyle.opacity))
+                .frame(width: config.buttonSize, height: config.buttonSize)
                 .background(
                     RoundedRectangle(cornerRadius: config.buttonCornerRadius)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.45))
                 )
         } else {
-            icon
+            icon()
+                .foregroundStyle(TitlebarControlIconStyle.foregroundColor.opacity(TitlebarControlIconStyle.opacity))
+                .frame(width: config.buttonSize, height: config.buttonSize)
         }
+    }
+}
+
+private struct TitlebarSidebarGlyph: View {
+    let iconSize: CGFloat
+
+    var body: some View {
+        TitlebarSidebarGlyphShape()
+            .stroke(
+                style: StrokeStyle(
+                    lineWidth: TitlebarControlIconStyle.sidebarGlyphStrokeWidth,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+            .frame(width: max(12, iconSize + 2), height: max(9, iconSize - 2))
+    }
+}
+
+private struct TitlebarSidebarGlyphShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let insetRect = rect.insetBy(dx: 0.5, dy: 0.5)
+        path.addRoundedRect(
+            in: insetRect,
+            cornerSize: CGSize(width: 2, height: 2)
+        )
+
+        let dividerX = insetRect.minX + insetRect.width * 0.36
+        path.move(to: CGPoint(x: dividerX, y: insetRect.minY + 1.5))
+        path.addLine(to: CGPoint(x: dividerX, y: insetRect.maxY - 1.5))
+        return path
     }
 }
 
